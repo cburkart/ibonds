@@ -1,4 +1,4 @@
-# TIPS Rates
+# Needed packages
 library(tidyverse)
 library(rvest)
 library(quantmod)
@@ -36,4 +36,23 @@ ibond_rates <- unlist(lapply(ibond_rates_raw[,2], function(x){as.numeric(gsub("%
 
 ibond_rates.xts <- xts(ibond_rates, order.by = as.Date(ibond_rates_dates) )
 
-getSymbols('DFII10', src='FRED')
+# Convert to daily for potential merging with other daily time series
+# or subsetting via to.period() functions for monthly/weekly/etc.
+
+# First grab any market data series like VTSMX to get a set of trading-day dates
+ibond_start <- index(first(ibond_rates.xts))
+ibond_window <- paste(ibond_start,"::",sep="")
+  
+getSymbols("VTSMX", from='1960-01-01')
+temp <- cbind(Ad(VTSMX[ibond_window]),ibond_rates.xts)
+for (i in 1:nrow(temp)){
+  if(is.na(temp[i,2])){
+    temp[i,2] <- temp[i-1,2]
+  }
+}
+
+ibond_rates_daily.xts <- xts(temp[,2], order.by = index(temp))
+
+
+
+
